@@ -6,43 +6,91 @@
 <title>Arcade Hub</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #0f0c29;
-  color: white;
-  display: flex;
-  height: 100vh;
+:root {
+  --bg: #0f0c29;
+  --panel: #1a1a2e;
+  --card: #2a2a40;
+  --accent: #ffd966;
 }
 
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, Arial, sans-serif;
+  background: var(--bg);
+  color: white;
+  height: 100vh;
+  display: flex;
+}
+
+/* Sidebar */
 .sidebar {
-  width: 260px;
-  background: #1a1a2e;
-  overflow-y: auto;
+  width: 280px;
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #333;
+}
+
+.sidebar-header {
+  padding: 12px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--accent);
+  text-align: center;
+  border-bottom: 1px solid #333;
+}
+
+.search {
   padding: 10px;
+  border: none;
+  outline: none;
+  width: 100%;
+  background: #111;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.game-list {
+  overflow-y: auto;
+  flex: 1;
 }
 
 .game {
   padding: 10px;
-  margin: 5px 0;
-  background: #2a2a40;
-  cursor: pointer;
+  margin: 6px;
+  background: var(--card);
   border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s;
 }
 
 .game:hover {
   background: #3a3a5a;
+  transform: translateX(4px);
 }
 
+/* Main area */
 .main {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
-header {
-  padding: 10px;
+.header {
   background: #111;
+  padding: 12px;
+  font-size: 1rem;
+  border-bottom: 1px solid #333;
+  color: var(--accent);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 iframe {
@@ -50,17 +98,31 @@ iframe {
   border: none;
   background: white;
 }
+
+/* Mobile */
+@media (max-width: 700px) {
+  .sidebar {
+    width: 200px;
+  }
+}
 </style>
 </head>
 
 <body>
 
-<div class="sidebar" id="list">
-  Loading games...
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-header">🎮 Arcade Hub</div>
+  <input class="search" id="search" placeholder="Search games..." />
+  <div class="game-list" id="list">Loading...</div>
 </div>
 
+<!-- MAIN -->
 <div class="main">
-  <header id="title">Select a game</header>
+  <div class="header">
+    <span id="title">Select a game</span>
+    <span>GitHub Arcade</span>
+  </div>
   <iframe id="frame"></iframe>
 </div>
 
@@ -71,34 +133,56 @@ const folder = "offline";
 const listEl = document.getElementById("list");
 const frame = document.getElementById("frame");
 const title = document.getElementById("title");
+const search = document.getElementById("search");
+
+let games = [];
 
 async function loadGames() {
   try {
     const res = await fetch(`https://api.github.com/repos/${repo}/contents/${folder}`);
     const files = await res.json();
 
-    listEl.innerHTML = "";
-
-    files
+    games = files
       .filter(f => f.name.endsWith(".html") || f.name.endsWith(".htm"))
-      .forEach(file => {
-        const div = document.createElement("div");
-        div.className = "game";
-        div.textContent = file.name.replace(".html","");
+      .map(f => ({
+        name: f.name.replace(".html",""),
+        url: f.download_url
+      }));
 
-        div.onclick = async () => {
-          title.textContent = file.name;
-          const html = await fetch(file.download_url).then(r => r.text());
-          frame.srcdoc = html;
-        };
-
-        listEl.appendChild(div);
-      });
+    renderGames(games);
 
   } catch (e) {
     listEl.innerHTML = "Failed to load games.";
   }
 }
+
+function renderGames(data) {
+  listEl.innerHTML = "";
+
+  data.forEach(game => {
+    const div = document.createElement("div");
+    div.className = "game";
+    div.textContent = game.name;
+
+    div.onclick = async () => {
+      title.textContent = game.name;
+      const html = await fetch(game.url).then(r => r.text());
+      frame.srcdoc = html;
+    };
+
+    listEl.appendChild(div);
+  });
+
+  if (data.length === 0) {
+    listEl.innerHTML = "<div style='padding:10px;opacity:0.7'>No games found</div>";
+  }
+}
+
+search.addEventListener("input", () => {
+  const term = search.value.toLowerCase();
+  const filtered = games.filter(g => g.name.toLowerCase().includes(term));
+  renderGames(filtered);
+});
 
 loadGames();
 </script>
