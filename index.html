@@ -1,182 +1,158 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Diddy’s Arcade</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arcade Hub</title>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial;
-      background: #0f0f0f;
-      color: white;
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
-    }
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f0c29;
+  color: white;
+  display: flex;
+  height: 100vh;
+}
 
-    /* SIDEBAR */
-    #sidebar {
-      width: 260px;
-      background: #1b1b1b;
-      display: flex;
-      flex-direction: column;
-      transition: 0.2s;
-    }
+/* Sidebar */
+.sidebar {
+  width: 280px;
+  background: #1a1a2e;
+  display: flex;
+  flex-direction: column;
+}
 
-    #sidebar.hidden {
-      width: 0;
-      overflow: hidden;
-    }
+.header {
+  padding: 12px;
+  text-align: center;
+  font-weight: bold;
+  color: #ffd966;
+  border-bottom: 1px solid #333;
+}
 
-    #topbar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px;
-      background: #222;
-    }
+input {
+  padding: 10px;
+  border: none;
+  outline: none;
+  background: #111;
+  color: white;
+}
 
-    #hamburger {
-      cursor: pointer;
-      background: #333;
-      padding: 6px 10px;
-      border-radius: 6px;
-      user-select: none;
-    }
+.list {
+  overflow-y: auto;
+  flex: 1;
+}
 
-    #search {
-      margin: 10px;
-      padding: 8px;
-      border: none;
-      border-radius: 6px;
-      width: calc(100% - 20px);
-    }
+.game {
+  padding: 10px;
+  margin: 6px;
+  background: #2a2a40;
+  border-radius: 8px;
+  cursor: pointer;
+}
 
-    #games {
-      overflow-y: auto;
-      padding: 10px;
-      flex: 1;
-    }
+.game:hover {
+  background: #3a3a5a;
+}
 
-    .card {
-      background: #2a2a2a;
-      padding: 10px;
-      margin-bottom: 8px;
-      border-radius: 8px;
-      cursor: pointer;
-    }
+/* Main */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
 
-    .card:hover {
-      background: #3a3a3a;
-    }
+.topbar {
+  background: #111;
+  padding: 10px;
+  color: #ffd966;
+  display: flex;
+  justify-content: space-between;
+}
 
-    /* MAIN AREA */
-    #main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-
-    #gamebar {
-      background: #222;
-      padding: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    #frame {
-      flex: 1;
-      width: 100%;
-      border: none;
-      background: black;
-    }
-
-    button {
-      background: red;
-      color: white;
-      border: none;
-      padding: 6px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-  </style>
+iframe {
+  flex: 1;
+  border: none;
+  background: white;
+}
+</style>
 </head>
 
 <body>
 
-<!-- SIDEBAR -->
-<div id="sidebar">
-  <div id="topbar">
-    <div id="hamburger">☰</div>
-    <strong>Diddy’s Arcade</strong>
-  </div>
-
-  <input id="search" placeholder="search games...">
-
-  <div id="games"></div>
+<div class="sidebar">
+  <div class="header">🎮 Arcade Hub</div>
+  <input id="search" placeholder="Search games...">
+  <div class="list" id="list">Loading...</div>
 </div>
 
-<!-- MAIN GAME VIEW -->
-<div id="main">
-  <div id="gamebar">
-    <span id="title">No game selected</span>
-    <button onclick="closeGame()">Close</button>
+<div class="main">
+  <div class="topbar">
+    <span id="title">Select a game</span>
+    <span>GitHub Arcade</span>
   </div>
-
   <iframe id="frame"></iframe>
 </div>
 
 <script>
 let games = [];
 
-// sidebar toggle
-document.getElementById("hamburger").onclick = () => {
-  document.getElementById("sidebar").classList.toggle("hidden");
-};
+const list = document.getElementById("list");
+const frame = document.getElementById("frame");
+const title = document.getElementById("title");
+const search = document.getElementById("search");
 
-// load games
-fetch("games.json")
-  .then(r => r.json())
-  .then(data => {
-    games = data;
-    render(data);
-  })
-  .catch(err => {
-    document.getElementById("games").innerHTML =
-      "<p style='color:red'>games.json failed to load</p>";
-    console.log(err);
-  });
+// Load games from JSON (NO API = FIXED)
+async function loadGames() {
+  try {
+    const res = await fetch("games.json");
+    games = await res.json();
+    render(games);
+  } catch (e) {
+    list.innerHTML = "Failed to load games.json";
+  }
+}
 
-function render(list){
-  const g = document.getElementById("games");
-  g.innerHTML = "";
+// Render list
+function render(data) {
+  list.innerHTML = "";
 
-  list.forEach(game => {
+  data.forEach(game => {
     const div = document.createElement("div");
-    div.className = "card";
+    div.className = "game";
     div.textContent = game.name;
 
-    div.onclick = () => {
-      document.getElementById("frame").src = game.url;
-      document.getElementById("title").textContent = game.name;
+    div.onclick = async () => {
+      title.textContent = game.name;
+
+      try {
+        const res = await fetch(game.url);
+        const html = await res.text();
+
+        // safety check (prevents your "]]>" issue)
+        if (!html || html.trim().length < 50) {
+          frame.srcdoc = "<h2 style='color:red'>Failed to load game</h2>";
+          return;
+        }
+
+        frame.srcdoc = html;
+      } catch (err) {
+        frame.srcdoc = "<h2 style='color:red'>Error loading game</h2>";
+      }
     };
 
-    g.appendChild(div);
+    list.appendChild(div);
   });
 }
 
-// search
-document.getElementById("search").addEventListener("input", e => {
-  const q = e.target.value.toLowerCase();
-  render(games.filter(g => g.name.toLowerCase().includes(q)));
+// Search filter
+search.addEventListener("input", () => {
+  const term = search.value.toLowerCase();
+  render(games.filter(g => g.name.toLowerCase().includes(term)));
 });
 
-function closeGame(){
-  document.getElementById("frame").src = "";
-  document.getElementById("title").textContent = "No game selected";
-}
+loadGames();
 </script>
 
 </body>
