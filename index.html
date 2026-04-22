@@ -1,61 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Arcade Hub</title>
 
 <style>
-:root {
-  --bg: #0f0c29;
-  --panel: #1a1a2e;
-  --card: #2a2a40;
-  --accent: #ffd966;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
 body {
-  font-family: system-ui, Arial, sans-serif;
-  background: var(--bg);
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f0c29;
   color: white;
-  height: 100vh;
   display: flex;
+  height: 100vh;
 }
 
 /* Sidebar */
 .sidebar {
   width: 280px;
-  background: var(--panel);
+  background: #1a1a2e;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #333;
 }
 
-.sidebar-header {
+.header {
   padding: 12px;
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: var(--accent);
   text-align: center;
+  font-weight: bold;
+  color: #ffd966;
   border-bottom: 1px solid #333;
 }
 
-.search {
+input {
   padding: 10px;
   border: none;
   outline: none;
-  width: 100%;
   background: #111;
   color: white;
-  font-size: 0.9rem;
 }
 
-.game-list {
+.list {
   overflow-y: auto;
   flex: 1;
 }
@@ -63,34 +47,28 @@ body {
 .game {
   padding: 10px;
   margin: 6px;
-  background: var(--card);
+  background: #2a2a40;
   border-radius: 8px;
   cursor: pointer;
-  transition: 0.2s;
 }
 
 .game:hover {
   background: #3a3a5a;
-  transform: translateX(4px);
 }
 
-/* Main area */
+/* Main */
 .main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-width: 0;
 }
 
-.header {
+.topbar {
   background: #111;
-  padding: 12px;
-  font-size: 1rem;
-  border-bottom: 1px solid #333;
-  color: var(--accent);
+  padding: 10px;
+  color: #ffd966;
   display: flex;
   justify-content: space-between;
-  align-items: center;
 }
 
 iframe {
@@ -98,28 +76,19 @@ iframe {
   border: none;
   background: white;
 }
-
-/* Mobile */
-@media (max-width: 700px) {
-  .sidebar {
-    width: 200px;
-  }
-}
 </style>
 </head>
 
 <body>
 
-<!-- SIDEBAR -->
 <div class="sidebar">
-  <div class="sidebar-header">🎮 Arcade Hub</div>
-  <input class="search" id="search" placeholder="Search games..." />
-  <div class="game-list" id="list">Loading...</div>
+  <div class="header">🎮 Arcade Hub</div>
+  <input id="search" placeholder="Search games...">
+  <div class="list" id="list">Loading...</div>
 </div>
 
-<!-- MAIN -->
 <div class="main">
-  <div class="header">
+  <div class="topbar">
     <span id="title">Select a game</span>
     <span>GitHub Arcade</span>
   </div>
@@ -127,37 +96,27 @@ iframe {
 </div>
 
 <script>
-const repo = "CoolDude2349/Offline-HTML-Games-Pack";
-const folder = "offline";
+let games = [];
 
-const listEl = document.getElementById("list");
+const list = document.getElementById("list");
 const frame = document.getElementById("frame");
 const title = document.getElementById("title");
 const search = document.getElementById("search");
 
-let games = [];
-
+// Load games from JSON (NO API = FIXED)
 async function loadGames() {
   try {
-    const res = await fetch(`https://api.github.com/repos/${repo}/contents/${folder}`);
-    const files = await res.json();
-
-    games = files
-      .filter(f => f.name.endsWith(".html") || f.name.endsWith(".htm"))
-      .map(f => ({
-        name: f.name.replace(".html",""),
-        url: f.download_url
-      }));
-
-    renderGames(games);
-
+    const res = await fetch("games.json");
+    games = await res.json();
+    render(games);
   } catch (e) {
-    listEl.innerHTML = "Failed to load games.";
+    list.innerHTML = "Failed to load games.json";
   }
 }
 
-function renderGames(data) {
-  listEl.innerHTML = "";
+// Render list
+function render(data) {
+  list.innerHTML = "";
 
   data.forEach(game => {
     const div = document.createElement("div");
@@ -166,22 +125,31 @@ function renderGames(data) {
 
     div.onclick = async () => {
       title.textContent = game.name;
-      const html = await fetch(game.url).then(r => r.text());
-      frame.srcdoc = html;
+
+      try {
+        const res = await fetch(game.url);
+        const html = await res.text();
+
+        // safety check (prevents your "]]>" issue)
+        if (!html || html.trim().length < 50) {
+          frame.srcdoc = "<h2 style='color:red'>Failed to load game</h2>";
+          return;
+        }
+
+        frame.srcdoc = html;
+      } catch (err) {
+        frame.srcdoc = "<h2 style='color:red'>Error loading game</h2>";
+      }
     };
 
-    listEl.appendChild(div);
+    list.appendChild(div);
   });
-
-  if (data.length === 0) {
-    listEl.innerHTML = "<div style='padding:10px;opacity:0.7'>No games found</div>";
-  }
 }
 
+// Search filter
 search.addEventListener("input", () => {
   const term = search.value.toLowerCase();
-  const filtered = games.filter(g => g.name.toLowerCase().includes(term));
-  renderGames(filtered);
+  render(games.filter(g => g.name.toLowerCase().includes(term)));
 });
 
 loadGames();
