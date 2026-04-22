@@ -1,5 +1,9 @@
 [
   {
+    "name": "wrust client"
+    "url": "https://raw.githubusercontent.com/beak2825/one-file-games/refs/heads/main/wurstclient.html"
+  },
+  {
     "name": "1.12",
     "url": "https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/1.12.html"
   },
