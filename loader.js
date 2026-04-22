@@ -4,59 +4,59 @@ function safeText(str) {
   return String(str).replaceAll("]]>", "]]&gt;");
 }
 
-// Load games.json
-fetch("games.json")
-  .then(res => res.json())
-  .then(data => {
-    gamesData = data;
-    renderGames(data);
-  });
+// wait for DOM so buttons exist
+window.addEventListener("DOMContentLoaded", () => {
 
-function renderGames(games) {
-  const container = document.getElementById("games");
-  container.innerHTML = "";
-
-  games.forEach(game => {
-    const card = document.createElement("div");
-    card.className = "card";
-
-    card.innerHTML = `
-      <h3>${safeText(game.name)}</h3>
-      <p>${safeText(game.category || "game")}</p>
-      <button>Play</button>
-    `;
-
-    card.onclick = () => openGame(game);
-
-    container.appendChild(card);
-  });
-}
-
-// Search
-document.getElementById("search").addEventListener("input", e => {
-  const q = e.target.value.toLowerCase();
-  const filtered = gamesData.filter(g =>
-    g.name.toLowerCase().includes(q)
-  );
-  renderGames(filtered);
-});
-
-function openGame(game) {
   const modal = document.getElementById("gameModal");
   const frame = document.getElementById("gameFrame");
   const title = document.getElementById("gameTitle");
+  const closeBtn = document.getElementById("closeBtn");
 
-  title.textContent = game.name;
+  // ✅ CLOSE BUTTON FIX
+  closeBtn.addEventListener("click", () => {
+    frame.src = "";
+    modal.classList.add("hidden");
+  });
 
-  frame.src = game.url; // IMPORTANT: must be direct playable link
+  // load games
+  fetch("games.json")
+    .then(res => res.json())
+    .then(data => {
+      gamesData = data;
+      renderGames(data);
+    });
 
-  modal.classList.remove("hidden");
-}
+  // search
+  document.getElementById("search").addEventListener("input", e => {
+    const q = e.target.value.toLowerCase();
+    renderGames(
+      gamesData.filter(g => g.name.toLowerCase().includes(q))
+    );
+  });
 
-function closeGame() {
-  const modal = document.getElementById("gameModal");
-  const frame = document.getElementById("gameFrame");
+  function renderGames(games) {
+    const container = document.getElementById("games");
+    container.innerHTML = "";
 
-  frame.src = ""; // stop game
-  modal.classList.add("hidden");
-}
+    games.forEach(game => {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      card.innerHTML = `
+        <h3>${safeText(game.name)}</h3>
+        <p>${game.category || ""}</p>
+        <button>Play</button>
+      `;
+
+      card.addEventListener("click", () => {
+        title.textContent = game.name;
+        frame.src = game.url;
+
+        modal.classList.remove("hidden");
+      });
+
+      container.appendChild(card);
+    });
+  }
+
+});
